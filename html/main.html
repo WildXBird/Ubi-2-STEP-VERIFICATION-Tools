@@ -1,0 +1,361 @@
+<!DOCTYPE HTML>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="maximum-scale=1.0, minimum-scale=1.0, user-scalable=0, initial-scale=1.0, width=device-width" />
+    <meta name="format-detection" content="telephone=no, email=no, date=no, address=no">
+    <title>Hello APP</title>
+    <link rel="stylesheet" type="text/css" href="../css/api.css" />
+    <script src="../script/totp.min.js"></script>
+    <script src="../script/arale-qrcode.js"></script>
+    <style>
+        label {
+            margin: 10px;
+            font-size: 24px;
+        }
+
+        ul {
+            margin-bottom: 10px;
+        }
+
+        ul li {
+            margin: 5px 10px;
+            padding: 5px;
+            color: #000;
+            word-wrap: break-word;
+        }
+        div.hb1{
+          height: 10px;
+        }
+        div.hb2{
+          height: 20px;
+        }
+        div.boxa{
+          background-color:#FFF;
+          height: 100px;
+        }
+        div.boxb{
+          margin-left:30px;
+          margin-right:30px;
+          height: 60px;
+        }
+        div.boxpin{
+          height: 40px;
+          width: 100%;
+          text-align: left;
+          color: #4285F4;
+          line-height: 40px;
+          font-size: 35px;
+          font-weight: bold;
+        }
+        div.boxname{
+          height: 30px;
+          width: 100%;
+          text-align: left;
+          color: #7A7A7A;
+          line-height: 30px;
+          font-size: 15px;
+          font-weight: normal;
+        }
+
+    </style>
+</head>
+  <img src="../image/shadow.png" style="position:absolute;left:0px;top:0px;width:100%;height:15px;">
+
+<body style="background-color:#F2F2F2;">
+  <div class="hb1"></div>
+  <div id="RContent">
+    <div style="display:none" id="box-0" onclick="BoxTouched(0)">
+      <div class="hb1"></div>
+        <div class="boxa">
+          <div class="boxb">
+            <div class="hb2"></div>
+            <div class="boxpin">
+              371 606
+            </div>
+            <div class="boxname">
+              Ubisoft
+            </div>
+
+          </div>
+        </div>
+      <div class="hb1"></div>
+    </div>
+  </div>
+
+  <div id='sys-info'></div>
+</body>
+<script type="text/javascript" src="../script/api.js"></script>
+<script type="text/javascript">
+    function reFreshMain(){
+      location.reload();
+    }
+    function BoxTouched(id,key){
+      var dialogBox = api.require('dialogBox');
+      dialogBox.evaluation({
+          styles: {
+              bg: '#fff',
+              w: 300,
+              title: {
+                  marginT: 20,
+                  size: 12,
+                  color: '#000',
+                  bold: true
+              },
+              content: {
+                  marginT: 10,
+                  color: '#111',
+                  size: 12
+              },
+              buttons: [{
+                  marginB: 0,
+                  marginL: 0,
+                  w: 300,
+                  h: 50,
+                  bg: '#fff',
+                  color: '#007FFF',
+                  size: 18
+              }, {
+                  marginB: 0,
+                  marginL: 0,
+                  w: 300,
+                  h: 50,
+                  bg: '#fff',
+                  color: '#007FFF',
+                  size: 18
+              }]
+          },
+          texts: {
+              title: id.replace('(Ubisoft)',"").substring(id.indexOf('-') + 1),
+              content: '秘钥明文:' + key,
+              buttons: [{
+                  text: '修改标记名称'
+              }, {
+                  text: '移除这个KEY'
+              }]
+          },
+          tapClose: true,
+      }, function(ret, err) {
+          if("0" == ret.index){
+            var dialogBox = api.require('dialogBox');
+                dialogBox.input({
+                    keyboardType: 'default',
+                    texts: {
+                        title: '修改标记名称',
+                        default: id.substring(id.indexOf("-")+1),
+                        leftBtnTitle: '取消',
+                        rightBtnTitle: '确定'
+                    },
+                    styles: {
+                        bg: '#fff',
+                        corner: 2,
+                        w: 300,
+                        h: 160,
+                        title: {
+                            h: 30,
+                            alignment: 'center',
+                            size: 22,
+                            color: '#000',
+                            marginT:30,
+                        },
+                        input: {
+                            h: 40,
+                            y: 30,
+                            marginT:15,
+                            marginLeft: 10,
+                            marginRight:10,
+                            textSize: 18,
+                            textColor: '#000'
+                        },
+                        dividingLine: {
+                            width: 0.5,
+                            color: '#696969'
+                        },
+                        left: {
+                            bg: 'rgba(0,0,0,0)',
+                            color: '#007FFF',
+                            size: 18
+                        },
+                        right: {
+                            bg: 'rgba(0,0,0,0)',
+                            color: '#007FFF',
+                            size: 18
+                        }
+                    }
+                }, function(ret) {
+                    if('left' == ret.eventType) {
+                        var dialogBox = api.require('dialogBox');
+                        dialogBox.close({
+                            dialogName: 'input'
+                        });
+                        return;
+                    }
+                    if('right' == ret.eventType) {
+                      if('' == ret.text){
+                        var dialogBox = api.require('dialogBox');
+                        dialogBox.close({
+                            dialogName: 'input'
+                        });
+                        return;
+                      }
+                        //同步返回结果：
+                        var Userkeylist = api.getPrefs({
+                            sync: true,
+                            key: 'Userkeylist'
+                        });
+                        //修改数组
+                        var UserkeylistArray = JSON.parse(Userkeylist);
+                        UserkeylistArray[Date.parse(new Date()) + '-' + ret.text] = UserkeylistArray[id];
+                        delete UserkeylistArray[id];
+                        UserkeylistJson = JSON.stringify(UserkeylistArray);
+                        //应用更改
+                        api.setPrefs({
+                            key: 'Userkeylist',
+                            value: UserkeylistJson
+                        });
+                        //刷新列表
+                        api.execScript({
+                          frameName: 'main',
+                          script: 'reFreshMain()',
+                        });
+                        //关闭窗口
+                        var dialogBox = api.require('dialogBox');
+                        dialogBox.close({
+                            dialogName: 'input'
+                        });
+                        return;
+                    }
+
+                });
+              return;
+          }
+          if("1" == ret.index){
+            api.confirm({
+                title: '确认删除',
+                msg: '删除后不可恢复',
+                buttons: ['确定', '取消']
+            }, function(ret, err) {
+              if('1' == ret.buttonIndex){
+                //同步返回结果：
+                var Userkeylist = api.getPrefs({
+                    sync: true,
+                    key: 'Userkeylist'
+                });
+                //移除数据
+                var UserkeylistArray = JSON.parse(Userkeylist);
+                delete UserkeylistArray[id];
+                var UserkeylistJson = JSON.stringify(UserkeylistArray);
+                //应用更改
+                api.setPrefs({
+                    key: 'Userkeylist',
+                    value: UserkeylistJson
+                });
+                //刷新列表
+                  reFreshMain()
+                //关闭窗口
+                var dialogBox = api.require('dialogBox');
+                  dialogBox.close({
+                  dialogName: 'evaluation'
+                });
+                return;
+              }
+              //关闭窗口
+              var dialogBox = api.require('dialogBox');
+                dialogBox.close({
+                dialogName: 'evaluation'
+              });
+              return;
+            });
+            return;
+
+          }
+      });
+    }
+    function reFreshKey(key,id,sid){
+      if("1" == sid){
+        var xhr = new XMLHttpRequest();
+        xhr.open("GET",'https://technical-test-server.r6sground.cn/r6sg-app/ug/key.php?key=' + key,true);
+        xhr.setRequestHeader("x-requested-with","XMLHttpRequest");
+        xhr.setRequestHeader("content-type","application/x-www-form-urlencoded; charset=UTF-8");
+        xhr.send();
+        xhr.onreadystatechange = function(){
+          if (xhr.readyState == 4) {
+            if (xhr.status>=200 && xhr.status<300) {
+              try {
+                var hResultJson = JSON.parse(xhr.responseText);
+              }catch(err) {
+                //alert('R6SG的GA服务暂时不可用，请稍后再试。\r\n你可以通过点击项目，然后复制给出的“秘钥明文”，然后使用其他GA服务进行PIN生成。');
+                document.getElementById("keybox-" + id).innerHTML='不可用';
+                return;
+              }
+              var hResult = parseInt(hResultJson.result).toString();
+              var hResult = hResult.substring(0,3) + " " + hResult.substring(3);
+              document.getElementById("keybox-" + id).innerHTML=hResult;
+              return;
+            };
+              document.getElementById("keybox-" + id).innerHTML='连接出错';
+          };
+        };
+      }
+      if("2" == sid){
+        var totp = new TOTP(key);
+        document.getElementById("keybox-" + id).innerHTML=totp.genOTP();
+      }
+    }
+
+    apiready = function() {
+      //同步返回结果：
+      var Userkeylist = api.getPrefs({
+          sync: true,
+          key: 'Userkeylist'
+      });
+      //是否为空
+      if('' == Userkeylist){
+        Userkeylist = '{}';
+      }
+
+      var UserkeylistArray = JSON.parse(Userkeylist);
+      for(var key in UserkeylistArray){
+        //键值分离
+        THisKEY = key.substring(key.indexOf("-")+1)
+        THisKEYID = key.substring(0,key.indexOf("-"))
+        //开始替换DOM
+        var RContentNow = document.getElementById('RContent').innerHTML;
+        var RContentNext = `
+                            <div class="" id="box-`;
+        var RContentNext = RContentNext + key;
+        var RContentNext = RContentNext + `
+                              " onclick="BoxTouched(`;
+        var RContentNext = RContentNext + "'" + key  + "'" + "," + "'" + UserkeylistArray[key] + "'" ;
+        var RContentNext = RContentNext + `
+                              )">
+                              <div class="hb1"></div>
+                                <div class="boxa">
+                                  <div class="boxb">
+                                    <div class="hb2"></div>
+                                    <div class="boxpin" id="keybox-`;
+                var RContentNext = RContentNext + key;
+                var RContentNext = RContentNext + `">查询中
+                                                  `;
+        var RContentNext = RContentNext +  `
+                                          </div>
+                                          <div class="boxname">
+                                            `;
+        var RContentNext = RContentNext +   THisKEY ;
+        var RContentNext = RContentNext +  `
+                                    </div>
+                                  </div>
+                                </div>
+                              <div class="hb1"></div>
+                            </div>
+                            `;
+        document.getElementById("RContent").innerHTML = RContentNow + RContentNext;
+        reFreshKey(UserkeylistArray[key],key,'2');
+      }
+
+
+    };
+</script>
+
+</html>

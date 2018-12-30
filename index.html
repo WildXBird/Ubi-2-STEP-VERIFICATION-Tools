@@ -1,0 +1,333 @@
+<!doctype html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="maximum-scale=1.0,minimum-scale=1.0,user-scalable=0,initial-scale=1.0,width=device-width" />
+    <meta name="format-detection" content="telephone=no,email=no,date=no,address=no">
+    <title>Hello APP</title>
+    <link rel="stylesheet" type="text/css" href="./css/api.css" />
+    <style type="text/css">
+        html,
+        body {
+            height: 100%;
+            background-color: #F2F2F2;
+        }
+
+        .wrap {
+            background-color: #F2F2F2;
+            display: -webkit-box;
+            -webkit-box-orient: vertical;
+            -webkit-flex-flow: column;
+        }
+
+        header {
+            height: 60px;
+            width: 100%;
+            text-align: left;
+            background-color: #4285F4;
+            color: #fff;
+            line-height: 60px;
+            font-size: 20px;
+        }
+
+        .flex-1 {
+            -webkit-box-flex: 1;
+            -webkit-flex: 1;
+            background-color: #F2F2F2;
+        }
+
+        footer {
+            height: 30px;
+            width: 100%;
+            background-color: #4285F4;
+            color: white;
+            line-height: 30px;
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body class="wrap">
+    <header id="THISheader">
+  <p style="text-indent:0.75em"><strong>Uplay</strong>&nbsp;两步验证登录器</p>
+
+    </header>
+    <section class="flex-1">
+
+    </section>
+    <footer>Powered by R6SG</footer>
+</body>
+<script type="text/javascript" src="./script/api.js"></script>
+<script type="text/javascript">
+    apiready = function() {
+      //api.removePrefs({    key: 'Userkeylist'});
+        var header = $api.dom('header'); // 获取 header 标签元素
+        var footer = $api.dom('footer'); // 获取 footer 标签元素
+
+        // 1.修复开启沉浸式效果带来的顶部Header与手机状态栏重合的问题，最新api.js方法已支持适配iPhoneX；
+        // 2.默认已开启了沉浸式效果 config.xml中 <preference name="statusBarAppearance" value="true"/>
+        // 3.沉浸式效果适配支持iOS7+，Android4.4+以上版本
+        var headerH = $api.fixStatusBar(header);
+        // 最新api.js为了适配iPhoneX增加的方法，修复底部Footer部分与iPhoneX的底部虚拟横条键重叠的问题；
+        var footerH = $api.fixTabBar(footer);
+        //主界面frame
+        api.openFrame({
+            name: 'main',
+            url: 'html/main.html',
+            bounces: false,
+            bgColor:'#4285F4',
+            rect: { // 推荐使用Margin布局，用于适配屏幕的动态变化
+                marginTop: headerH, // main页面距离win顶部的高度
+                marginBottom: footerH, // main页面距离win底部的高度
+                w: 'auto' // main页面的宽度 自适应屏幕宽度
+            }
+        });
+
+        //浮动按钮frame
+        api.openFrame({
+            name: 'button',
+            url: 'html/button.html',
+            bounces: false,
+            bgColor:'rgba(0,0,0,0)',
+            rect: {
+              x:document.body.clientWidth - 90,    //坐标
+              y:document.body.clientHeight - 120,    //坐标
+              w:70,           //宽度，若传'auto'，页面从x位置开始自动充满父页面宽度
+              h:90            //高度，若传'auto'，页面从y位置开始自动充满父页面高度
+            }
+        });
+
+        //刷新按钮frame
+        api.openFrame({
+            name: 'refresh',
+            url: 'html/refresh.html',
+            bounces: false,
+            bgColor:'rgba(0,0,0,0)',
+            rect: {
+              x:document.body.clientWidth - 60,    //坐标
+              y:document.getElementById("THISheader").offsetHeight - 60,    //坐标
+              w:60,           //宽度，若传'auto'，页面从x位置开始自动充满父页面宽度
+              h:80            //高度，若传'auto'，页面从y位置开始自动充满父页面高度
+            }
+        });
+
+    };
+    //功能：使用二维码添加账户
+    function QRCode(){
+      var FNScanner = api.require('FNScanner');
+          FNScanner.open({
+              autorotation: true
+          }, function(ret, err) {
+            if('success' == ret.eventType){
+                //解析二维码内容
+                //内容应该是这样的：otpauth://totp/0000000710@qq.com?secret=kfzg4000000toqsj&issuer=Ubisoft
+
+                //内容匹配
+                if("otpauth" != ret.content.substring(0,7)){
+                  api.toast({
+                      msg: '不能识别的二维码',
+                      duration: 2000,
+                      location: 'bottom'
+                  });
+                  return;
+                }
+                //尝试赋值
+                try {
+                  var UserMailAddress = ret.content.substring(15).substring(0,ret.content.substring(15).indexOf('?'));
+                  if ('-1' != ret.content.indexOf('issuer')) {
+                    if('-1' != ret.content.substring((ret.content.indexOf('secret'))).indexOf('issuer')) {
+                        var SecretKey = ret.content.substring(ret.content.lastIndexOf('secret=') + 7,ret.content.lastIndexOf('&'));
+                    }else{
+                        var SecretKey = ret.content.substring(ret.content.indexOf('secret=') + 7,ret.content.lastIndexOf('&'));
+                    }
+                  } else {
+                      var SecretKey = ret.content.substring(ret.content.lastIndexOf('secret=') + 7);
+                  }
+                }catch(err) {
+                  api.toast({
+                      msg: '不能识别的二维码',
+                      duration: 2000,
+                      location: 'bottom'
+                  });
+                  return;
+                }
+
+                //同步返回结果：
+                var Userkeylist = api.getPrefs({
+                    sync: true,
+                    key: 'Userkeylist'
+                });
+                //是否为空
+                if('' == Userkeylist){
+                  Userkeylist = '{}';
+                }
+                //追加数组
+                var UserkeylistArray = JSON.parse(Userkeylist);
+                UserkeylistArray[Date.parse(new Date()) + '-' + UserMailAddress + '(Ubisoft)'] = SecretKey;
+                UserkeylistJson = JSON.stringify(UserkeylistArray);
+                //应用更改
+                api.setPrefs({
+                    key: 'Userkeylist',
+                    value: UserkeylistJson
+                });
+                //刷新列表
+                api.execScript({
+                  frameName: 'main',
+                  script: 'reFreshMain()',
+                });
+
+            }
+
+      });
+    }
+    //功能：输入KEY添加账户
+    function TypeKey(){
+      var dialogBox = api.require('dialogBox');
+        dialogBox.input({
+            keyboardType: 'default',
+            texts: {
+                title: '输入秘钥',
+                placeholder: '例如:kfzg40g50toqsj',
+                leftBtnTitle: '取消',
+                rightBtnTitle: '确定'
+            },
+            styles: {
+                bg: '#fff',
+                corner: 2,
+                w: 300,
+                h: 160,
+                title: {
+                    h: 30,
+                    alignment: 'center',
+                    size: 22,
+                    color: '#000',
+                    marginT:30,
+                },
+                input: {
+                    h: 40,
+                    y:30,
+                    marginT:15,
+                    marginLeft: 10,
+                    marginRight:10,
+                    textSize: 18,
+                    textColor: '#000'
+                },
+                dividingLine: {
+                    width: 0.5,
+                    color: '#696969'
+                },
+                left: {
+                    bg: 'rgba(0,0,0,0)',
+                    color: '#007FFF',
+                    size: 18
+                },
+                right: {
+                    bg: 'rgba(0,0,0,0)',
+                    color: '#007FFF',
+                    size: 18
+                }
+            }
+        }, function(ret) {
+            if('left' == ret.eventType) {
+                var dialogBox = api.require('dialogBox');
+                dialogBox.close({
+                    dialogName: 'input'
+                });
+                return;
+            }
+            if('right' == ret.eventType) {
+              if('' == ret.text){
+                var dialogBox = api.require('dialogBox');
+                dialogBox.close({
+                    dialogName: 'input'
+                });
+                return;
+              }
+                //同步返回结果：
+                var Userkeylist = api.getPrefs({
+                    sync: true,
+                    key: 'Userkeylist'
+                });
+                //是否为空
+                if('' == Userkeylist){
+                  Userkeylist = '{}';
+                }
+                //追加数组
+                var UserkeylistArray = JSON.parse(Userkeylist);
+                UserkeylistArray[Date.parse(new Date()) + '-' + '未命名的账户'] = ret.text;
+                UserkeylistJson = JSON.stringify(UserkeylistArray);
+                //应用更改
+                api.setPrefs({
+                    key: 'Userkeylist',
+                    value: UserkeylistJson
+                });
+                //刷新列表
+                api.execScript({
+                  frameName: 'main',
+                  script: 'reFreshMain()',
+                });
+                //关闭窗口
+                var dialogBox = api.require('dialogBox');
+                dialogBox.close({
+                    dialogName: 'input'
+                });
+                return;
+            }
+
+        });
+    }
+    //功能：新增账户
+    function addkey(){
+          var dialogBox = api.require('dialogBox');
+            dialogBox.confirm({
+                tapClose: true,
+                msg: {
+                    content:'想要怎么添加？',
+                    leftBtnTitle: '扫描二维码',
+                    rightBtnTitle:'输入秘钥'
+                },
+                styles: {
+                    bg: '#fff',
+                    maskBg:'rgba(0,0,0,0.5)',
+                    h: 120,
+                    msg :{
+                        color : '#7a7a7a',
+                        size  : 20,
+                        maginLR: 30 ,
+                        maginT: 15,
+                  align : 'center'
+
+                    },
+                    leftBtn :{
+                        borderColor: 'rgba(0,0,0,0)',
+                        color: '#007FFF',
+                  highlightBg : '#E4E4E4',
+                        size: 20
+                    },
+                    rightBtn :{
+                        bg: 'rgba(0,0,0,0)',
+                        selectedBg:'#007FFF',
+                        color: '#007FFF',
+                  highlightBg : '#E4E4E4',
+                        size: 20
+                    }
+                }
+            }, function(ret) {
+              if('cancel' == ret.eventType){
+                dialogBox.close({dialogName: 'confirm'});
+                QRCode();
+                return;
+              }
+              if('ok' == ret.eventType){
+                dialogBox.close({dialogName: 'confirm'});
+                TypeKey();
+                return;
+              }
+
+            });
+        }
+
+</script>
+
+</html>
